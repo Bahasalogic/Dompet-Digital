@@ -1,6 +1,6 @@
 // Service worker Dompetku — cache tampilan aplikasi agar bisa dibuka offline.
 // Data keuangan TIDAK lewat sini: permintaan ke Google (Apps Script) selalu langsung ke jaringan.
-const V = 'dompetku-v2'; // naikkan angka ini (v2, v3, ...) bila index.html diganti agar cache ikut diperbarui
+const V = 'dompetku-v3'; // naikkan angka ini (v2, v3, ...) bila index.html diganti agar cache ikut diperbarui
 const SHELL = ['index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
