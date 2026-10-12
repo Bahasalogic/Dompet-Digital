@@ -146,31 +146,40 @@ function balances(){const b={};S.wal.forEach(w=>b[w.n]=w.o||0);S.tx.forEach(x=>{
 function byCat(a,t){const o={};a.filter(x=>x.t==t).forEach(x=>o[x.k]=(o[x.k]||0)+x.j);return Object.entries(o).sort((p,q)=>q[1]-p[1])}
 
 /* ================= sinkron + antrian offline ================= */
-let flushing=false;
+let flushing=false,infl=0;const lastOk={};
 async function call(body){
   const r=await fetch(cfg.url,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(Object.assign({token:cfg.pin},body))});
   const j=await r.json();if(!j.ok){const e=new Error(j.error);e.server=true;throw e}return j;
 }
 function apply(j){["tx","rec","goal","debt","bud","wal","cat"].forEach(k=>{if(j[k]!==undefined)S[k]=j[k]});if(!S.wal.length)S.wal=DEFW;ls.set(CK(),S);render()}
 const qsave=()=>ls.set(QK(),Q);
+const secs=t0=>((performance.now()-t0)/1000).toFixed(1).replace(".",",")+" dtk";
 async function flush(){
   if(flushing||!Q.length||!cfg.url)return;
-  flushing=true;let last=null,err=null;
+  flushing=true;let last=null,err=null;const t0=performance.now(),id0=cfg.id;
   while(Q.length){
     status("Menyimpan… ("+Q.length+")");
-    try{last=await call(Q[0]);Q.shift();qsave()}
-    catch(e){if(e.server&&!/PIN/i.test(e.message)){Q.shift();qsave();toast("Ditolak server: "+e.message);continue}err=e;break}
+    const n=(!cfg.nb&&Q.length>1)?Math.min(Q.length,25):1;infl=n;
+    try{
+      if(n>1){last=await call({action:"batch",items:Q.slice(0,n)});Q.splice(0,n);qsave();if(last.errs&&last.errs.length)toast(last.errs.length+" perubahan ditolak server")}
+      else{last=await call(Q[0]);Q.shift();qsave()}
+    }catch(e){
+      infl=0;
+      if(n>1&&e.server&&/tidak dikenal/i.test(e.message)){cfg.nb=true;ls.set("dp_prof",PR);continue}   // Code.gs lama belum mendukung batch -> kirim satu-satu
+      if(e.server&&!/PIN/i.test(e.message)){Q.splice(0,n);qsave();toast("Ditolak server: "+e.message);continue}
+      err=e;break}
   }
-  flushing=false;
+  infl=0;flushing=false;
   if(err)status("⏳ "+Q.length+" perubahan menunggu sinkron — "+err.message,1);
-  else if(last){apply(last);status("✓ Tersimpan "+clock())}else sync();
+  else if(last){apply(last);lastOk[id0]=Date.now();status("✓ Tersimpan "+clock()+" · "+secs(t0))}else sync(true);
 }
-async function sync(){
+async function sync(force){
   if(!cfg.url){status("Belum terhubung ke Spreadsheet — buka ⚙️ Pengaturan",1);return}
   if(Q.length){await flush();return}
+  if(!force&&lastOk[cfg.id]&&Date.now()-lastOk[cfg.id]<45000)return;   // baru saja disinkronkan: tidak perlu lagi
   status("Menyinkronkan…");
-  const g0=gen;
-  try{const r=await fetch(cfg.url+"?token="+encodeURIComponent(cfg.pin));const j=await r.json();if(!j.ok)throw new Error(j.error);if(g0!==gen)return;if(!Q.length){apply(j);status("✓ Tersinkron "+clock())}}
+  const g0=gen,t0=performance.now();
+  try{const r=await fetch(cfg.url+"?token="+encodeURIComponent(cfg.pin));const j=await r.json();if(!j.ok)throw new Error(j.error);if(g0!==gen)return;if(!Q.length){apply(j);lastOk[cfg.id]=Date.now();status("✓ Tersinkron "+clock()+" · "+secs(t0))}}
   catch(e){if(g0===gen)status("Gagal sinkron: "+e.message+" (memakai data tersimpan)",1)}
 }
 function push(body){Q.push(body);qsave();ls.set(CK(),S);render();flush()}
@@ -179,15 +188,15 @@ function put(col,item){
   const L=S[col];
   if(!item.id){item.id="tmp"+Date.now().toString(36)+Math.random().toString(36).slice(2,5);L.unshift(item)}
   else{const i=L.findIndex(x=>x.id==item.id);if(i>=0)L[i]=item;else L.unshift(item)}
-  if(isTmp(item.id)){const qi=Q.findIndex((b,i)=>b.action=="put"&&b.col==col&&b.item.id==item.id&&!(flushing&&i==0));if(qi>=0){Q[qi].item=item;qsave();ls.set(CK(),S);render();flush();return}}
+  if(isTmp(item.id)){const qi=Q.findIndex((b,i)=>b.action=="put"&&b.col==col&&b.item.id==item.id&&i>=infl);if(qi>=0){Q[qi].item=item;qsave();ls.set(CK(),S);render();flush();return}}
   push({action:"put",col:col,item:item});
 }
 function del(col,id){
   S[col]=S[col].filter(x=>x.id!=id);
-  if(isTmp(id)){for(let i=Q.length-1;i>=0;i--){if(flushing&&i==0)continue;if(Q[i].action=="put"&&Q[i].col==col&&Q[i].item.id==id)Q.splice(i,1)}qsave();ls.set(CK(),S);render();flush()}
+  if(isTmp(id)){for(let i=Q.length-1;i>=0;i--){if(i<infl)continue;if(Q[i].action=="put"&&Q[i].col==col&&Q[i].item.id==id)Q.splice(i,1)}qsave();ls.set(CK(),S);render();flush()}
   else push({action:"del",col:col,id:id});
 }
-window.addEventListener("online",()=>sync());
+window.addEventListener("online",()=>sync(true));
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&cfg.url)sync()});
 
 /* ================= navigasi ================= */
@@ -454,12 +463,12 @@ function rSet(){
   <div class="card"><h2 class="s">🏷 Kategori</h2><small class="mu">Satu baris satu kategori, awali dengan emoji. Kosongkan untuk memakai bawaan.</small><small style="display:block;margin-top:8px"><b>Pemasukan</b></small><textarea id="sci" rows="4">${esc((S.cat.in||[]).join("\n"))}</textarea><small><b>Pengeluaran</b></small><textarea id="sce" rows="5">${esc((S.cat.ex||[]).join("\n"))}</textarea><button class="add" onclick="saveCat()">Simpan Kategori</button></div>
   <div class="card"><h2 class="s">🎨 Tampilan & Keamanan</h2><select onchange="setPref('theme',this.value)"><option value="auto" ${P.theme=="auto"?"selected":""}>Tema: otomatis</option><option value="light" ${P.theme=="light"?"selected":""}>Tema: terang</option><option value="dark" ${P.theme=="dark"?"selected":""}>Tema: gelap</option></select><label class="chk"><input type="checkbox" ${P.hide?"checked":""} onchange="setPref('hide',this.checked)"> Sembunyikan nominal saldo</label><label class="chk"><input type="checkbox" ${P.lock?"checked":""} onchange="setPref('lock',this.checked)"> Kunci aplikasi dengan PIN saat dibuka (PIN salah satu profil)</label></div>
   <div class="card"><h2 class="s">📲 Pasang di HP</h2>${instHtml()}</div>
-  <div class="card"><h2 class="s">🗄 Data</h2><button class="add gh" style="margin-top:0" onclick="sync()">🔄 Sinkron sekarang</button><button class="add gh" onclick="if(confirm('Hapus cache lokal? Data di Spreadsheet tidak terhapus.')){localStorage.removeItem(CK());localStorage.removeItem(QK());location.reload()}">Hapus cache lokal</button></div>`;
+  <div class="card"><h2 class="s">🗄 Data</h2><button class="add gh" style="margin-top:0" onclick="sync(true)">🔄 Sinkron sekarang</button><button class="add gh" onclick="if(confirm('Hapus cache lokal? Data di Spreadsheet tidak terhapus.')){localStorage.removeItem(CK());localStorage.removeItem(QK());location.reload()}">Hapus cache lokal</button></div>`;
 }
 function saveConn(){
   const url=g("su").value.trim(),pin=g("sp").value.trim(),name=g("sn").value.trim()||cfg.name;
   if(url!==cfg.url&&Q.length&&!confirm("Ada "+Q.length+" perubahan yang belum terkirim. Perubahan itu akan dikirim ke Spreadsheet yang baru. Lanjutkan?"))return;
-  cfg.name=name;cfg.url=url;cfg.pin=pin;ls.set("dp_prof",PR);render();toast("Menyimpan koneksi…");sync();
+  cfg.name=name;cfg.url=url;cfg.pin=pin;ls.set("dp_prof",PR);render();toast("Menyimpan koneksi…");sync(true);
 }
 /* ---- profil ---- */
 function profMenu(){
