@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b5ed7">
+<meta name="apple-mobile-web-app-title" content="Dompetku">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Dompetku PRO</title>
@@ -213,6 +218,7 @@ function rHome(){
   S.rec.filter(r=>r.on&&r.nx&&r.nx<=t7).forEach(r=>al.push(`🔁 ${esc(nm(r.k))} ${rp(r.j)} — ${fmtD(r.nx)}`));
   g("main").innerHTML=`<div class="bal"><div class="top"><small>Total Saldo</small><button class="ib" onclick="togHide()" aria-label="Sembunyikan saldo">${P.hide?"🙈":"👁"}</button></div><div class="n">${rp(tot)}</div><div class="row"><div>⬇ Pemasukan<b>${rp(I)}</b></div><div>⬆ Pengeluaran<b>${rp(E)}</b></div></div></div>
   <div class="ws">${Object.entries(b).map(([w,v])=>`<div class="wc" onclick="ui.w='${esc(w).replace(/'/g,"\\'")}';go('tx')"><small>${esc(w)}</small><b>${rp(v)}</b></div>`).join("")}</div>
+  ${DP&&!P.noinst?`<div class="card"><div class="lr" style="align-items:center"><span>📲 Pasang Dompetku di HP</span><span><button class="add sm" onclick="installApp()">Pasang</button> <button class="ib" onclick="P.noinst=true;ls.set('dp_pref',P);render()" aria-label="Tutup">✕</button></span></div></div>`:""}
   ${al.length?`<div class="card"><h2 class="s">🔔 Pengingat</h2>${al.map(a=>`<div class="al">${a}</div>`).join("")}</div>`:""}
   <div class="card"><h2 class="s">💡 Ringkasan ${mlabel(ui.m)}</h2>
    <div class="lr"><span>Selisih bulan ini</span><b class="${I-E>=0?"pos":"neg"}">${rp(I-E)}</b></div>
@@ -430,6 +436,7 @@ function rSet(){
   <div class="card"><h2 class="s">👛 Dompet & Saldo Awal</h2><small class="mu">Satu baris satu dompet, format Nama:SaldoAwal</small><textarea id="sw" rows="4">${esc(S.wal.map(w=>w.n+":"+(w.o||0)).join("\n"))}</textarea><button class="add" onclick="saveWal()">Simpan Dompet</button></div>
   <div class="card"><h2 class="s">🏷 Kategori</h2><small class="mu">Satu baris satu kategori, awali dengan emoji. Kosongkan untuk memakai bawaan.</small><small style="display:block;margin-top:8px"><b>Pemasukan</b></small><textarea id="sci" rows="4">${esc((S.cat.in||[]).join("\n"))}</textarea><small><b>Pengeluaran</b></small><textarea id="sce" rows="5">${esc((S.cat.ex||[]).join("\n"))}</textarea><button class="add" onclick="saveCat()">Simpan Kategori</button></div>
   <div class="card"><h2 class="s">🎨 Tampilan & Keamanan</h2><select onchange="setPref('theme',this.value)"><option value="auto" ${P.theme=="auto"?"selected":""}>Tema: otomatis</option><option value="light" ${P.theme=="light"?"selected":""}>Tema: terang</option><option value="dark" ${P.theme=="dark"?"selected":""}>Tema: gelap</option></select><label class="chk"><input type="checkbox" ${P.hide?"checked":""} onchange="setPref('hide',this.checked)"> Sembunyikan nominal saldo</label><label class="chk"><input type="checkbox" ${P.lock?"checked":""} onchange="setPref('lock',this.checked)"> Kunci aplikasi dengan PIN saat dibuka</label></div>
+  <div class="card"><h2 class="s">📲 Pasang di HP</h2>${instHtml()}</div>
   <div class="card"><h2 class="s">🗄 Data</h2><button class="add gh" style="margin-top:0" onclick="sync()">🔄 Sinkron sekarang</button><button class="add gh" onclick="if(confirm('Hapus cache lokal? Data di Spreadsheet tidak terhapus.')){localStorage.removeItem('dp_cache');localStorage.removeItem('dp_q');location.reload()}">Hapus cache lokal</button></div>`;
 }
 function saveConn(){cfg={url:g("su").value.trim(),pin:g("sp").value.trim()};ls.set("dp_cfg",cfg);toast("Menyimpan koneksi…");sync()}
@@ -445,12 +452,29 @@ function saveCat(){
 function setPref(k,v){P[k]=v;ls.set("dp_pref",P);applyTheme();if(k=="hide")render()}
 function applyTheme(){document.documentElement.dataset.theme=P.theme=="auto"?"":P.theme}
 
+/* ================= pasang sebagai aplikasi (PWA) ================= */
+let DP=null;
+const standalone=()=>(window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||navigator.standalone===true;
+const isIOS=()=>/iphone|ipad|ipod/i.test(navigator.userAgent);
+const rr=()=>{if(ui.tab=="set"||ui.tab=="home")render()};
+function instHtml(){
+  if(standalone())return '<div class="mu" style="font-size:14px">✓ Aplikasi sudah terpasang dan berjalan sebagai aplikasi.</div>';
+  if(DP)return '<small class="mu">Pasang agar muncul di layar utama, tampil layar penuh, dan bisa dibuka tanpa internet (data tetap tersinkron ke Spreadsheet saat online).</small><button class="add" style="margin-top:8px" onclick="installApp()">Pasang Aplikasi</button>';
+  if(isIOS())return '<div style="font-size:14px">Di iPhone/iPad: buka lewat <b>Safari</b>, ketuk tombol <b>Bagikan</b> (kotak dengan panah ke atas), lalu pilih <b>Tambah ke Layar Utama</b>.</div>';
+  return '<div style="font-size:14px">Buka menu <b>⋮</b> di Chrome, lalu pilih <b>Instal aplikasi</b> atau <b>Tambahkan ke layar utama</b>.</div>';
+}
+async function installApp(){if(!DP)return;DP.prompt();try{await DP.userChoice}catch(e){}DP=null;rr()}
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();DP=e;rr()});
+window.addEventListener("appinstalled",()=>{DP=null;toast("Aplikasi terpasang 🎉");rr()});
+if("serviceWorker" in navigator&&/^https?:/.test(location.protocol))window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+
 /* ================= kunci & mulai ================= */
 function unlock(){if(g("lkp").value===cfg.pin){g("lk").style.display="none";g("lkp").value=""}else{toast("PIN salah");g("lkp").value=""}}
 applyTheme();
 if(P.lock&&cfg.pin)g("lk").style.display="flex";
 render();
 if(cfg.url)sync();else{status("Belum terhubung ke Spreadsheet — buka ⚙️ Pengaturan",1);go("set")}
+if(/[?&]add=1/.test(location.search))openForm();
 </script>
 </body>
 </html>
