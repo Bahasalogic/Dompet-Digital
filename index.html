@@ -72,6 +72,46 @@ textarea{resize:vertical}
 #lk{display:none;position:fixed;inset:0;background:var(--bg);z-index:20;align-items:center;justify-content:center;padding:24px}
 #lk .bx{max-width:300px;width:100%;text-align:center}#lk h1{font-size:22px}
 @media print{.nav,.fab,.mn,#st,.ib,.noprint{display:none!important}body{background:#fff;color:#000}.card{break-inside:avoid}}
+/* ===== laporan keuangan (pratinjau & cetak PDF) ===== */
+#rpt{display:none;position:fixed;inset:0;z-index:30;background:#cbd5e1;overflow:auto}
+#rpt .tb{position:sticky;top:0;z-index:2;display:flex;gap:8px;align-items:center;padding:10px 12px;padding-top:calc(10px + env(safe-area-inset-top,0px));background:#111827;color:#fff}
+#rpt .tb button{border:0;border-radius:8px;padding:9px 14px;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap}
+#rpt .tb .go{background:#2563eb;color:#fff}#rpt .tb .cl{background:#374151;color:#fff}#rpt .tb small{flex:1;font-size:11px;opacity:.8;line-height:1.3}
+.paper{background:#fff;color:#111827;width:794px;margin:12px auto;padding:44px 48px;box-shadow:0 2px 12px rgba(0,0,0,.25);font-family:"Segoe UI",Roboto,Arial,sans-serif;font-size:12px;line-height:1.45;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.paper *{box-sizing:border-box}
+.paper h1{font-size:23px;margin:0;color:#0a3d91;letter-spacing:-.01em}
+.paper .sub{color:#4b5563;margin-top:3px;font-size:13px}
+.paper .rh{display:flex;justify-content:space-between;gap:16px;border-bottom:3px solid #0b5ed7;padding-bottom:12px;margin-bottom:4px}
+.paper .rh>div:first-child{flex:1;min-width:0}.paper .meta{flex:none;font-size:11px;text-align:right}.paper .meta div{margin-bottom:2px}.paper .meta span{color:#6b7280;margin-right:6px}
+.paper h2{font-size:14px;color:#0a3d91;margin:22px 0 8px;padding-bottom:4px;border-bottom:1px solid #cbd5e1;break-after:avoid;page-break-after:avoid}
+.paper table{width:100%;border-collapse:collapse;margin:0}
+.paper th{background:#eef2f7;text-align:left;padding:6px 8px;font-size:11px;border-bottom:1px solid #94a3b8;color:#1f2937}
+.paper td{padding:5px 8px;border-bottom:1px solid #e5e7eb;vertical-align:top}
+.paper td.r,.paper th.r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.paper tbody tr:nth-child(even) td{background:#f8fafc}
+.paper tfoot td{font-weight:700;border-top:2px solid #94a3b8;background:#eef2f7}
+.paper thead{display:table-header-group}.paper tfoot{display:table-row-group}.paper tr{break-inside:avoid;page-break-inside:avoid}
+.paper .tx td{font-size:11px}.paper .tx .op td{background:#f1f5f9}
+.paper .kv td:first-child{color:#374151}
+.paper .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+.paper .kpi div{border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px}
+.paper .kpi small{display:block;color:#6b7280;font-size:10px;text-transform:uppercase;letter-spacing:.03em}
+.paper .kpi b{font-size:14px;display:block;margin-top:2px}
+.paper .g{color:#15803d}.paper .rd{color:#b91c1c}.paper .gy{color:#6b7280;font-weight:400}.paper .wn{color:#b45309}
+.paper .bb{display:inline-block;width:110px;height:8px;background:#e5e7eb;border-radius:4px;vertical-align:middle;overflow:hidden}
+.paper .bb i{display:block;height:100%;background:#0b5ed7}.paper .bb.x i{background:#e03131}.paper .bb.n i{background:#12a150}
+.paper .concl{background:#eff6ff;border-left:4px solid #0b5ed7;padding:9px 12px;margin-top:10px;border-radius:4px}
+.paper .note{margin:20px 0 0;color:#6b7280;font-size:10px}
+.paper .foot{margin-top:8px;padding-top:8px;border-top:1px solid #cbd5e1;color:#6b7280;font-size:10px;display:flex;justify-content:space-between;gap:12px}
+@page{size:A4;margin:14mm 12mm 16mm}
+@page{@bottom-right{content:"Halaman " counter(page) " dari " counter(pages);font-size:8pt;color:#6b7280}@bottom-left{content:"Dompetku PRO";font-size:8pt;color:#6b7280}}
+@media print{
+  body.rm>*:not(#rpt){display:none!important}
+  body.rm{background:#fff!important;padding:0!important}
+  body.rm #rpt{display:block!important;position:static;background:#fff;overflow:visible}
+  body.rm #rpt .tb{display:none!important}
+  body.rm .paper{width:auto!important;max-width:none;margin:0;padding:0;box-shadow:none;zoom:1!important}
+}
 </style>
 </head>
 <body>
@@ -85,6 +125,7 @@ textarea{resize:vertical}
 <div class="nav" id="nav"></div>
 <div id="md" onclick="if(event.target===this)closeM()"></div>
 <div id="tt"></div>
+<div id="rpt"></div>
 <div id="lk"><div class="bx"><h1>🔒 Dompetku</h1><p class="mu">Masukkan PIN untuk membuka</p><input id="lkp" type="password" inputmode="numeric" placeholder="PIN" onkeydown="if(event.key==='Enter')unlock()"><button class="add" onclick="unlock()">Buka</button></div></div>
 <input type="file" id="fi" accept=".csv,text/csv" style="display:none" onchange="importCSV(this)">
 <script>
@@ -110,7 +151,8 @@ const mlabel=(m,s)=>{const[y,mo]=m.split("-").map(Number);return new Date(y,mo-1
 const dim=m=>{const[y,mo]=m.split("-").map(Number);return new Date(y,mo,0).getDate()};
 const fmtD=d=>d?pd(d).toLocaleDateString("id-ID",{day:"numeric",month:"short",year:"numeric"}):"";
 const clock=()=>new Date().toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"});
-const ico=k=>String(k).split(" ")[0], nm=k=>String(k).split(" ").slice(1).join(" ")||String(k);
+const lead=k=>{const m=String(k).match(/^(\S+)\s+(.+)$/);return m&&!/^[\p{L}\p{N}]/u.test(m[1])?m:null};
+const ico=k=>{const m=lead(k);return m?m[1]:"🏷"}, nm=k=>{const m=lead(k);return m?m[2]:String(k)};
 const toast=t=>{const e=g("tt");e.textContent=t;e.style.display="block";clearTimeout(toast.h);toast.h=setTimeout(()=>e.style.display="none",3000)};
 const status=(t,err)=>{const e=g("st");e.textContent=t;e.style.color=err?"var(--ex)":"var(--mu)"};
 const money=v=>Number(String(v).replace(/\D/g,""))||0;
@@ -311,7 +353,7 @@ function rRep(){
   <div class="card"><h2 class="s">Pengeluaran Harian</h2><div class="ch" style="height:90px">${dd.map((v,i)=>`<div title="Tgl ${i+1}: ${nf(v)}"><div class="b" style="height:70px"><i style="width:80%;height:${v/dmx*100}%;background:var(--ex)"></i></div>${(i+1)%5==1?i+1:""}</div>`).join("")}</div></div>
   ${big.length?`<div class="card"><h2 class="s">5 Pengeluaran Terbesar</h2>${big.map(item).join("")}</div>`:""}
   <div class="card"><h2 class="s">Arus per Dompet</h2>${Object.keys(wf).length?Object.entries(wf).map(([w,v])=>`<div class="lr"><span>${esc(w)}</span><span><span class="pos">+${rp(v.i)}</span> <span class="neg">−${rp(v.o)}</span></span></div>`).join(""):'<div class="em">-</div>'}</div>
-  <div class="noprint"><button class="add gh" onclick="exportCSV()">⬇ Ekspor semua transaksi (CSV)</button><button class="add gh" onclick="g('fi').click()">⬆ Impor transaksi dari CSV</button><button class="add gh" onclick="window.print()">🖨 Cetak / Simpan PDF</button></div>`;
+  <div class="noprint"><button class="add gh" onclick="exportCSV()">⬇ Ekspor semua transaksi (CSV)</button><button class="add gh" onclick="g('fi').click()">⬆ Impor transaksi dari CSV</button><button class="add gh" onclick="reportForm()">📄 Laporan Keuangan (PDF)</button></div>`;
 }
 function exportCSV(){
   const q=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
@@ -352,8 +394,8 @@ function rCal(){
 
 /* ================= LAINNYA ================= */
 function rMore(){
-  const M=[["goal","🎯","Target Tabungan","Kejar tujuan keuanganmu"],["debt","🤝","Hutang & Piutang","Catat pinjaman dan cicilan"],["rec","🔁","Transaksi Berulang","Gaji, langganan, cicilan otomatis"],["cal","📅","Kalender","Lihat pemasukan/pengeluaran harian"],["set","⚙️","Pengaturan","Koneksi, dompet, kategori, keamanan"]];
-  g("main").innerHTML=M.map(([k,i,t,d])=>`<div class="card menu" onclick="go('${k}')"><div class="ic">${i}</div><div class="m"><b>${t}</b><br><small class="mu">${d}</small></div><span class="mu">›</span></div>`).join("");
+  const M=[["goal","🎯","Target Tabungan","Kejar tujuan keuanganmu"],["debt","🤝","Hutang & Piutang","Catat pinjaman dan cicilan"],["rec","🔁","Transaksi Berulang","Gaji, langganan, cicilan otomatis"],["cal","📅","Kalender","Lihat pemasukan/pengeluaran harian"],["rpt","📄","Laporan Keuangan (PDF)","Cetak laporan resmi per bulan / tahun"],["set","⚙️","Pengaturan","Koneksi, dompet, kategori, keamanan"]];
+  g("main").innerHTML=M.map(([k,i,t,d])=>`<div class="card menu" onclick="${k=="rpt"?"reportForm()":"go('"+k+"')"}"><div class="ic">${i}</div><div class="m"><b>${t}</b><br><small class="mu">${d}</small></div><span class="mu">›</span></div>`).join("");
 }
 
 /* ================= TARGET ================= */
@@ -512,6 +554,135 @@ function saveCat(){
 }
 function setPref(k,v){P[k]=v;ls.set("dp_pref",P);applyTheme();if(k=="hide")render()}
 function applyTheme(){document.documentElement.dataset.theme=P.theme=="auto"?"":P.theme}
+
+/* ================= LAPORAN KEUANGAN (PDF) ================= */
+const rpf=n=>(n<0?"−":"")+"Rp "+Math.abs(Math.round(n)).toLocaleString("id-ID");
+const dmy=d=>d.slice(8)+"/"+d.slice(5,7)+"/"+d.slice(0,4);
+const lastDay=m=>m+"-"+p2(dim(m));
+const longNow=()=>new Date().toLocaleDateString("id-ID",{day:"numeric",month:"long",year:"numeric"})+", "+clock();
+function reportForm(){
+  const m=ui.m,y=m.slice(0,4);
+  modal(mh("Laporan Keuangan (PDF)")+`<small class="mu">Periode laporan</small>
+  <select id="rp" onchange="g('rc').style.display=this.value=='c'?'flex':'none'"><option value="m">Bulan ${mlabel(m)}</option><option value="q">3 bulan (s.d. ${mlabel(m)})</option><option value="y">Tahun ${y}</option><option value="c">Rentang tanggal sendiri…</option><option value="a">Semua data</option></select>
+  <div id="rc" class="fl" style="display:none"><div><small class="mu">Dari</small><input id="rf" type="date" value="${m}-01"></div><div><small class="mu">Sampai</small><input id="rt2" type="date" value="${lastDay(m)}"></div></div>
+  <small class="mu">Judul laporan</small><input id="rtl" value="Laporan Keuangan">
+  <small class="mu">Disusun oleh (opsional)</small><input id="rnm" value="${esc(P.rname||"")}" placeholder="Nama penyusun">
+  <label class="chk"><input type="checkbox" id="rtx" checked> Sertakan rincian semua transaksi</label>
+  <button class="add" onclick="buildReport()">Lihat Laporan</button>`);
+}
+function period(k){
+  const m=ui.m;
+  if(k=="m")return[m+"-01",lastDay(m)];
+  if(k=="q")return[mshift(m,-2)+"-01",lastDay(m)];
+  if(k=="y"){const y=m.slice(0,4);return[y+"-01-01",y+"-12-31"]}
+  if(k=="c")return[g("rf").value,g("rt2").value];
+  const ds=S.tx.map(x=>x.d).sort();return[ds[0]||today(),ds[ds.length-1]||today()];
+}
+function plabel(f,t){
+  const m=f.slice(0,7),m2=t.slice(0,7);
+  if(f==m+"-01"&&t==lastDay(m2)){
+    if(f.slice(5)=="01-01"&&t.slice(5)=="12-31"&&f.slice(0,4)==t.slice(0,4))return"Tahun "+f.slice(0,4);
+    return m==m2?mlabel(m):mlabel(m)+" – "+mlabel(m2);
+  }
+  return fmtD(f)+" s.d. "+fmtD(t);
+}
+function buildReport(){
+  const[from,to]=period(g("rp").value);
+  if(!from||!to||from>to){toast("Periode tidak valid");return}
+  const title=g("rtl").value.trim()||"Laporan Keuangan",by=g("rnm").value.trim(),withTx=g("rtx").checked;
+  P.rname=by;ls.set("dp_pref",P);closeM();
+  showReport(reportHTML(from,to,title,by,withTx),title+" - "+cfg.name+" - "+plabel(from,to));
+}
+function reportHTML(from,to,title,by,withTx){
+  let sn=0;const sec=t=>`<h2>${"ABCDEFGHIJKL"[sn++]}. ${t}</h2>`;
+  const days=Math.round((pd(to)-pd(from))/864e5)+1;
+  const T=S.tx.filter(x=>x.d>=from&&x.d<=to),B=S.tx.filter(x=>x.d<from);
+  const I=sum(T,"in"),E=sum(T,"ex"),net=I-E,rate=I?Math.round(net/I*100):null;
+  const pTo=addDays(from,-1),pFrom=addDays(from,-days),PT=S.tx.filter(x=>x.d>=pFrom&&x.d<=pTo),pI=sum(PT,"in"),pE=sum(PT,"ex");
+  const chg=(a,b,good)=>{if(!b)return'<span class="gy">–</span>';const p=Math.round((a-b)/b*100),up=p>0;return`<span class="${p==0?"gy":(up==good?"g":"rd")}">${p>0?"▲":p<0?"▼":"●"} ${Math.abs(p)}%</span>`};
+  const cin=byCat(T,"in"),cex=byCat(T,"ex"),top=cex[0],big=T.filter(x=>x.t=="ex").sort((a,b)=>b.j-a.j)[0];
+  /* saldo per dompet */
+  const names=[...new Set(S.wal.map(w=>w.n).concat(S.tx.map(x=>x.w),S.tx.filter(x=>x.t=="tf").map(x=>x.to)))].filter(Boolean);
+  const wr=names.map(n=>{
+    const w=S.wal.find(v=>v.n==n);let o=w?w.o||0:0;
+    B.forEach(x=>{if(x.w==n)o+=x.t=="in"?x.j:-x.j;if(x.t=="tf"&&x.to==n)o+=x.j});
+    let i=0,e=0,ti=0,to2=0;
+    T.forEach(x=>{if(x.w==n){if(x.t=="in")i+=x.j;else if(x.t=="ex")e+=x.j;else to2+=x.j}if(x.t=="tf"&&x.to==n)ti+=x.j});
+    return{n:n,o:o,i:i,e:e,t:ti-to2,c:o+i-e+ti-to2};
+  });
+  const W=wr.reduce((a,w)=>({o:a.o+w.o,i:a.i+w.i,e:a.e+w.e,t:a.t+w.t,c:a.c+w.c}),{o:0,i:0,e:0,t:0,c:0});
+  const catTable=(list,tot,cls)=>list.length?`<table><thead><tr><th>Kategori</th><th class="r">Jumlah</th><th class="r">%</th><th></th></tr></thead><tbody>${list.map(([k,v])=>`<tr><td>${esc(nm(k))}</td><td class="r">${rpf(v)}</td><td class="r">${(v/tot*100).toFixed(1).replace(".",",")}%</td><td><span class="bb ${cls}"><i style="width:${(v/tot*100).toFixed(1)}%"></i></span></td></tr>`).join("")}</tbody><tfoot><tr><td>Total</td><td class="r">${rpf(tot)}</td><td class="r">100%</td><td></td></tr></tfoot></table>`:'<p class="gy">Tidak ada data pada periode ini.</p>';
+  const concl=T.length?`Pada periode ini terdapat <b>${net>=0?"surplus":"defisit"}</b> sebesar <b>${rpf(Math.abs(net))}</b>${rate!==null?` (rasio tabungan ${rate}%)`:""}. Total pemasukan ${rpf(I)} dan total pengeluaran ${rpf(E)}${top?`; pengeluaran terbesar pada kategori <b>${esc(nm(top[0]))}</b> (${Math.round(top[1]/E*100)}% dari total pengeluaran)`:""}.`:"Tidak ada transaksi pada periode ini.";
+  let h=`<div class="rh"><div><h1>${esc(title)}</h1><div class="sub">Periode: <b>${plabel(from,to)}</b></div></div><div class="meta"><div><span>Buku / Profil</span><b>${esc(cfg.name)}</b></div><div><span>Mata uang</span><b>Rupiah (IDR)</b></div>${by?`<div><span>Disusun oleh</span><b>${esc(by)}</b></div>`:""}<div><span>Dicetak</span><b>${longNow()}</b></div></div></div>`;
+
+  /* A. ringkasan */
+  h+=sec("Ringkasan Arus Kas")+`<div class="kpi"><div><small>Total Pemasukan</small><b class="g">${rpf(I)}</b></div><div><small>Total Pengeluaran</small><b class="rd">${rpf(E)}</b></div><div><small>${net>=0?"Surplus":"Defisit"}</small><b class="${net>=0?"g":"rd"}">${rpf(net)}</b></div><div><small>Rasio Tabungan</small><b>${rate===null?"–":rate+"%"}</b></div></div>
+  <table class="kv"><tbody><tr><td>Jumlah transaksi</td><td class="r">${T.length}</td></tr><tr><td>Rata-rata pengeluaran per hari (${days} hari)</td><td class="r">${rpf(E/days)}</td></tr>${big?`<tr><td>Pengeluaran tunggal terbesar</td><td class="r">${rpf(big.j)} <span class="gy">· ${esc(nm(big.k))}${big.c?" — "+esc(big.c):""} (${dmy(big.d)})</span></td></tr>`:""}<tr><td>Pemasukan dibanding periode sebelumnya (${rpf(pI)})</td><td class="r">${chg(I,pI,true)}</td></tr><tr><td>Pengeluaran dibanding periode sebelumnya (${rpf(pE)})</td><td class="r">${chg(E,pE,false)}</td></tr></tbody></table><div class="concl">${concl}</div>`;
+
+  /* B. saldo per dompet */
+  h+=sec("Posisi Saldo per Dompet")+`<table><thead><tr><th>Dompet</th><th class="r">Saldo Awal</th><th class="r">Pemasukan</th><th class="r">Pengeluaran</th><th class="r">Transfer (bersih)</th><th class="r">Saldo Akhir</th></tr></thead><tbody>${wr.map(w=>`<tr><td>${esc(w.n)}</td><td class="r">${rpf(w.o)}</td><td class="r g">${rpf(w.i)}</td><td class="r rd">${rpf(w.e)}</td><td class="r gy">${rpf(w.t)}</td><td class="r"><b>${rpf(w.c)}</b></td></tr>`).join("")}</tbody><tfoot><tr><td>Total</td><td class="r">${rpf(W.o)}</td><td class="r">${rpf(W.i)}</td><td class="r">${rpf(W.e)}</td><td class="r">${rpf(W.t)}</td><td class="r">${rpf(W.c)}</td></tr></tfoot></table>`;
+
+  /* C, D. kategori */
+  h+=sec("Pemasukan per Kategori")+catTable(cin,I,"n");
+  h+=sec("Pengeluaran per Kategori")+catTable(cex,E,"x");
+
+  /* rekap bulanan */
+  const m0=from.slice(0,7),m1=to.slice(0,7),months=[];
+  for(let m=m0,i=0;m<=m1&&i<240;m=mshift(m,1),i++)months.push(m);
+  if(months.length>1){
+    const rows=months.map(m=>{const a=T.filter(x=>x.d.slice(0,7)==m),i=sum(a,"in"),e=sum(a,"ex");return{m:m,i:i,e:e}});
+    h+=sec("Rekap Bulanan")+`<table><thead><tr><th>Bulan</th><th class="r">Pemasukan</th><th class="r">Pengeluaran</th><th class="r">Selisih</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${mlabel(r.m)}</td><td class="r g">${rpf(r.i)}</td><td class="r rd">${rpf(r.e)}</td><td class="r ${r.i-r.e>=0?"g":"rd"}">${rpf(r.i-r.e)}</td></tr>`).join("")}</tbody><tfoot><tr><td>Total</td><td class="r">${rpf(I)}</td><td class="r">${rpf(E)}</td><td class="r">${rpf(net)}</td></tr></tfoot></table>`;
+  }
+
+  /* realisasi anggaran (hanya periode satu bulan penuh) */
+  const single=m0==m1&&from==m0+"-01"&&to==lastDay(m0),bk=Object.keys(S.bud).filter(k=>S.bud[k]>0);
+  if(single&&bk.length){
+    const sp={};cex.forEach(([k,v])=>sp[k]=v);
+    const order=bk.sort((a,b)=>(a=="_TOTAL"?-1:b=="_TOTAL"?1:a.localeCompare(b)));
+    h+=sec("Realisasi Anggaran")+`<table><thead><tr><th>Kategori</th><th class="r">Anggaran</th><th class="r">Realisasi</th><th class="r">Sisa</th><th class="r">%</th></tr></thead><tbody>${order.map(k=>{const lim=S.bud[k],s=k=="_TOTAL"?E:(sp[k]||0),p=Math.round(s/lim*100);return`<tr><td>${k=="_TOTAL"?"<b>Total semua</b>":esc(nm(k))}</td><td class="r">${rpf(lim)}</td><td class="r">${rpf(s)}</td><td class="r ${lim-s<0?"rd":"g"}">${rpf(lim-s)}</td><td class="r ${p>100?"rd":p>=80?"wn":""}">${p}%${p>100?" ⚠":""}</td></tr>`}).join("")}</tbody></table>`;
+  }
+
+  /* hutang & piutang */
+  const dopen=S.debt.filter(d=>!d.ok);
+  if(dopen.length){
+    const sis=d=>Math.max(0,d.j-d.p),th=dopen.filter(d=>d.t=="hutang").reduce((s,d)=>s+sis(d),0),tp=dopen.filter(d=>d.t=="piutang").reduce((s,d)=>s+sis(d),0);
+    h+=sec("Hutang & Piutang (belum lunas)")+`<table><thead><tr><th>Jenis</th><th>Nama</th><th class="r">Total</th><th class="r">Dibayar</th><th class="r">Sisa</th><th>Jatuh Tempo</th></tr></thead><tbody>${dopen.map(d=>`<tr><td>${d.t=="hutang"?"Hutang":"Piutang"}</td><td>${esc(d.n)}</td><td class="r">${rpf(d.j)}</td><td class="r">${rpf(d.p)}</td><td class="r"><b>${rpf(sis(d))}</b></td><td>${d.dl?dmy(d.dl):"–"}</td></tr>`).join("")}</tbody><tfoot><tr><td colspan="4">Total hutang saya</td><td class="r rd">${rpf(th)}</td><td></td></tr><tr><td colspan="4">Total piutang (tagihan ke orang lain)</td><td class="r g">${rpf(tp)}</td><td></td></tr></tfoot></table>`;
+  }
+
+  /* target tabungan */
+  if(S.goal.length){
+    h+=sec("Target Tabungan")+`<table><thead><tr><th>Target</th><th class="r">Jumlah Target</th><th class="r">Terkumpul</th><th class="r">Kekurangan</th><th class="r">Capaian</th><th>Tenggat</th></tr></thead><tbody>${S.goal.map(o=>`<tr><td>${esc(o.n)}</td><td class="r">${rpf(o.tg)}</td><td class="r">${rpf(o.cl)}</td><td class="r">${rpf(Math.max(0,o.tg-o.cl))}</td><td class="r"><b>${pct(o.cl,o.tg)}%</b></td><td>${o.dl?dmy(o.dl):"–"}</td></tr>`).join("")}</tbody></table>`;
+  }
+
+  /* rincian transaksi (seperti rekening koran) */
+  if(withTx){
+    const L=T.slice().sort((a,b)=>a.d.localeCompare(b.d)||String(a.id).localeCompare(String(b.id)));
+    let bal=W.o;
+    h+=sec("Rincian Transaksi")+(L.length?`<table class="tx"><thead><tr><th>Tanggal</th><th>Keterangan</th><th>Dompet</th><th class="r">Masuk</th><th class="r">Keluar</th><th class="r">Saldo</th></tr></thead><tbody><tr class="op"><td></td><td><i>Saldo awal periode</i></td><td></td><td></td><td></td><td class="r">${rpf(bal)}</td></tr>${L.map(x=>{
+      if(x.t=="in")bal+=x.j;else if(x.t=="ex")bal-=x.j;
+      const desc=x.t=="tf"?`Transfer ${esc(x.w)} → ${esc(x.to)}${x.c?" — "+esc(x.c):""} <span class="gy">(${rpf(x.j)})</span>`:`${esc(nm(x.k))}${x.c?" — "+esc(x.c):""}`;
+      return`<tr><td>${dmy(x.d)}</td><td>${desc}</td><td>${x.t=="tf"?"":esc(x.w)}</td><td class="r g">${x.t=="in"?nf(x.j):""}</td><td class="r rd">${x.t=="ex"?nf(x.j):""}</td><td class="r">${nf(bal)}</td></tr>`}).join("")}</tbody><tfoot><tr><td colspan="3">Total periode / Saldo akhir</td><td class="r">${nf(I)}</td><td class="r">${nf(E)}</td><td class="r">${rpf(bal)}</td></tr></tfoot></table>`:'<p class="gy">Tidak ada transaksi pada periode ini.</p>');
+  }
+
+  h+=`<p class="note">Catatan: saldo awal dihitung dari saldo awal dompet ditambah seluruh transaksi sebelum tanggal awal periode. Transfer antar dompet tidak mengubah total saldo. Nilai dalam Rupiah (Rp).</p><div class="foot"><span>Dibuat dengan Dompetku PRO · ${esc(cfg.name)}</span><span>Dicetak ${longNow()}</span></div>`;
+  return h;
+}
+let RPT={name:"Laporan Keuangan"};
+function showReport(html,name){
+  RPT.name=name.replace(/[\\/:*?"<>|]/g,"-");
+  const r=g("rpt");
+  r.innerHTML=`<div class="tb"><button class="go" onclick="printReport()">🖨 Cetak / Simpan PDF</button><button class="cl" onclick="closeReport()">✕ Tutup</button><small>Di jendela cetak, pilih <b>Simpan sebagai PDF</b>.</small></div><div class="paper" id="ppr">${html}</div>`;
+  r.style.display="block";document.body.classList.add("rm");r.scrollTop=0;fitPaper();
+}
+function fitPaper(){const p=g("ppr");if(p)p.style.zoom=Math.min(1,(window.innerWidth-16)/794)}
+window.addEventListener("resize",fitPaper);
+function closeReport(){const r=g("rpt");r.style.display="none";r.innerHTML="";document.body.classList.remove("rm")}
+function printReport(){
+  const old=document.title;document.title=RPT.name;   // nama file PDF bawaan
+  const back=()=>{document.title=old;window.removeEventListener("afterprint",back)};
+  window.addEventListener("afterprint",back);
+  setTimeout(()=>window.print(),60);
+}
 
 /* ================= pasang sebagai aplikasi (PWA) ================= */
 let DP=null;
